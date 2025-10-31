@@ -47,6 +47,3 @@ sysinfo.txt
 *.apk
 *.aab
 *.unitypackage
-
-# Addressables
-[Aa]ssets/
