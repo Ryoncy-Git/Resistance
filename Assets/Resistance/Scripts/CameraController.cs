@@ -20,11 +20,17 @@ public class CameraController : MonoBehaviour
         if (input != 0f)
         {
             float minScale = 0.2f;
+            float maxScale = 5f;
 
             board.transform.localScale += new Vector3(input, input, 0f);
             if(board.transform.localScale.x < minScale)
             {
                 board.transform.localScale = new Vector3(minScale, minScale, 0f);
+            }
+
+            if(board.transform.localScale.x > maxScale)
+            {
+                board.transform.localScale = new Vector3(maxScale, maxScale, 0f);
             }
         }
 

@@ -51,7 +51,10 @@ public class NodeDraggable : MonoBehaviour
             Port port = child.GetChild(0).gameObject.GetComponent<Port>();
             if(port.connectedPort != null)
             {
-                port.ConnectBezier();
+                port.connectedPort.bezierConnection.DeleteBezier();
+                port.bezierConnection.DeleteBezier();
+
+                port.bezierConnection.ConnectBezier();
             }
         }
     }
