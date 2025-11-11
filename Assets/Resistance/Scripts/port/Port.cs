@@ -5,7 +5,7 @@ public class Port : MonoBehaviour
 {
     public string portType;
     public Nodes parentNode;
-    public Port connectedPort;
+    // public Port connectedPort;
     private static Port draggingPort = null;
     private bool isPushAlt = false;
     public ConnectionLine connectionLine;
@@ -20,7 +20,7 @@ public class Port : MonoBehaviour
     public void Initialize(Nodes parent)
     {
         portType = "port";
-        connectedPort = null;
+        // connectedPort = null;
         parentNode = parent;
     }
 
@@ -48,9 +48,16 @@ public class Port : MonoBehaviour
         if (isPushAlt)
         {
             // コネクションの切断
+
             // 接続先が無かったらearly return
             if (connectedPorts.Count == 0)
                 return;
+
+            // 接続線の描画をクリア
+            foreach(Port p in connectedPorts)
+            {
+                ConnectionManager.Instance.DeleteConnection(this, p);
+            }
 
 
             // 接続をクリア
@@ -61,17 +68,7 @@ public class Port : MonoBehaviour
             }
             // 自分のconnectedPortをすべてクリア
             connectedPorts.Clear();
-
-
-            // 接続線の描画をクリア
-            connectionLine.DeleteLine();
-            foreach (Port port in connectedPorts)
-            {
-                port.connectionLine.DeleteLine();
-            }
-            // connectedPort.connectedPort = null;
             
-
             Debug.Log("disconnected");
         }
         else
@@ -96,7 +93,9 @@ public class Port : MonoBehaviour
                         Debug.Log($"Connected {draggingPort.parentNode.name} ↔ {port.parentNode.name}");
 
                         // 接続されていることを表す線を描画
-                        connectionLine.ConnectLine();
+                        // connectionLine.ConnectLine();
+                        ConnectionManager cm = ConnectionManager.Instance;
+                        cm.CreateConnection(this, draggingPort);
                     }
                     else
                     {

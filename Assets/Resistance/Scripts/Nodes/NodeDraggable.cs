@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
+using System.Collections.Generic;
 
 public class NodeDraggable : MonoBehaviour
 {
@@ -53,19 +54,16 @@ public class NodeDraggable : MonoBehaviour
         {
             Port port = child.GetChild(0).gameObject.GetComponent<Port>();
 
-            // ポートが接続先を持っていたら
-            // ラインの描画しなおし
-            if(port.connectedPorts.Count != 0)
+            foreach (Port p in port.connectedPorts)
             {
-                foreach(Port p in port.connectedPorts)
-                {
-                    if(port.connectedPorts.Count != 0)
-                        p.connectionLine.DeleteLine();
-                }
-                // port.connectedPort.connectionLine.DeleteLine();
-                port.connectionLine.DeleteLine();
+                ConnectionManager cm = ConnectionManager.Instance;
 
-                port.connectionLine.ConnectLine();
+                var key = cm.NormalizeKey(port, p);
+
+                if(cm.connections.TryGetValue(key, out var conn))
+                {
+                    conn.UpdateLine();
+                }
             }
         }
     }

@@ -12,12 +12,19 @@ public class Connection : MonoBehaviour
         portA = a;
         portB = b;
         line = GetComponent<LineRenderer>();
+        line.positionCount = 2;
 
         UpdateLine();
     }
 
     public void UpdateLine()
     {
-        
+        line.SetPosition(0, portA.transform.position);
+        line.SetPosition(1, portB.transform.position);
+    }
+
+    public void DeleteLine()
+    {
+        line.positionCount = 0;
     }
 }
