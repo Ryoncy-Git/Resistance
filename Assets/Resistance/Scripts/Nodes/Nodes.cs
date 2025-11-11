@@ -8,7 +8,7 @@ public abstract class Nodes : MonoBehaviour
 
     public Port CreatePort()
     {
-        var portGO = Instantiate(portPrefab, transform);
+        var portGO = Instantiate(portPrefab, transform); // gameobject
         var port = portGO.GetComponent<Port>();
         port.Initialize(this);
         Ports.Add(port);

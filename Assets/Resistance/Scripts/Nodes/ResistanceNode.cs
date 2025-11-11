@@ -7,7 +7,7 @@ public class ResistanceNode : Nodes
     private Nodes portInput;
     public override void Initialize()
     {
-        nodeName = "Parallel";
+        nodeName = "Resistance";
         portIn = portOut = null;
 
         InstallPort();

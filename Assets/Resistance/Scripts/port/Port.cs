@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 public class Port : MonoBehaviour
 {
@@ -7,11 +8,13 @@ public class Port : MonoBehaviour
     public Port connectedPort;
     private static Port draggingPort = null;
     private bool isPushAlt = false;
-    public BezierConnection bezierConnection;
+    public ConnectionLine connectionLine;
+
+    public List<Port> connectedPorts = new List<Port>();
 
     void Start()
     {
-        bezierConnection = this.gameObject.GetComponent<BezierConnection>();
+        connectionLine = this.gameObject.GetComponent<ConnectionLine>();
     }
 
     public void Initialize(Nodes parent)
@@ -28,6 +31,7 @@ public class Port : MonoBehaviour
 
     void Update()
     {
+        // altキー押してるかだけ判断
         if (Input.GetKeyDown(KeyCode.LeftAlt))
         {
             isPushAlt = true;
@@ -43,14 +47,30 @@ public class Port : MonoBehaviour
     {
         if (isPushAlt)
         {
-            if (connectedPort == null)
+            // コネクションの切断
+            // 接続先が無かったらearly return
+            if (connectedPorts.Count == 0)
                 return;
 
-            bezierConnection.DeleteBezier();
-            connectedPort.bezierConnection.DeleteBezier();
 
-            connectedPort.connectedPort = null;
-            connectedPort = null;
+            // 接続をクリア
+            foreach (Port port in connectedPorts)
+            {
+                // 相手方のconnectedPortから自分を削除
+                port.connectedPorts.Remove(this);
+            }
+            // 自分のconnectedPortをすべてクリア
+            connectedPorts.Clear();
+
+
+            // 接続線の描画をクリア
+            connectionLine.DeleteLine();
+            foreach (Port port in connectedPorts)
+            {
+                port.connectionLine.DeleteLine();
+            }
+            // connectedPort.connectedPort = null;
+            
 
             Debug.Log("disconnected");
         }
@@ -69,11 +89,14 @@ public class Port : MonoBehaviour
                 {
                     if (port.CanConnect(draggingPort))
                     {
-                        port.connectedPort = draggingPort;
-                        draggingPort.connectedPort = port;
+                        // 接続
+                        // connectedPortに接続先を追加
+                        port.connectedPorts.Add(draggingPort);
+                        draggingPort.connectedPorts.Add(port);
                         Debug.Log($"Connected {draggingPort.parentNode.name} ↔ {port.parentNode.name}");
 
-                        bezierConnection.ConnectBezier();
+                        // 接続されていることを表す線を描画
+                        connectionLine.ConnectLine();
                     }
                     else
                     {

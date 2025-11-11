@@ -2,58 +2,59 @@ using UnityEngine;
 
 public class CameraController : MonoBehaviour
 {
-    public GameObject board;
+    public GameObject rig;
     private bool isCameraDragged;
     private Vector3 posStartDragCursol;
     private Vector3 posStartDragTransform;
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+
+    private float minZoom = 1f, maxZoom = 50f;
+    private float zoomSpeed = 50f;
+    private Camera cam;
     void Start()
     {
-
+        cam = Camera.main;
     }
 
     // Update is called once per frame
     void Update()
     {
-        float input = Input.GetAxis("Mouse ScrollWheel");
+        // ズーム
+        float scroll = Input.GetAxis("Mouse ScrollWheel");
 
-        if (input != 0f)
+
+        if (Mathf.Abs(scroll) > 0.01f)
         {
-            float minScale = 0.2f;
-            float maxScale = 5f;
-
-            board.transform.localScale += new Vector3(input, input, 0f);
-            if(board.transform.localScale.x < minScale)
-            {
-                board.transform.localScale = new Vector3(minScale, minScale, 0f);
-            }
-
-            if(board.transform.localScale.x > maxScale)
-            {
-                board.transform.localScale = new Vector3(maxScale, maxScale, 0f);
-            }
+            float size = cam.orthographicSize * (1f - scroll * zoomSpeed * Time.deltaTime * 10f);
+            cam.orthographicSize = Mathf.Clamp(size, minZoom, maxZoom);
         }
 
+        // ドラッグ開始合図
         if (Input.GetMouseButtonDown(2))
         {
-            posStartDragCursol = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            posStartDragTransform = board.transform.position;
+            posStartDragCursol = Input.mousePosition;
+            posStartDragTransform = rig.transform.position;
             isCameraDragged = true;
         }
 
+        // ドラッグ終わり合図
         if (Input.GetMouseButtonUp(2))
         {
             isCameraDragged = false;
         }
-        
 
-        if(isCameraDragged)
+
+        // ドラッグの処理
+        if (isCameraDragged)
         {
-            Vector3 delta = Camera.main.ScreenToWorldPoint(Input.mousePosition) - posStartDragCursol;
-            Vector3 buf = posStartDragTransform + delta;
+            Vector3 deltaScreen = Input.mousePosition - posStartDragCursol;
+            Vector3 deltaWorld = cam.ScreenToWorldPoint(new Vector3(deltaScreen.x, deltaScreen.y, cam.nearClipPlane))
+                               - cam.ScreenToWorldPoint(new Vector3(0, 0, cam.nearClipPlane));
+            Vector3 buf = posStartDragTransform - deltaWorld;
+
             float x = Mathf.Clamp(buf.x, -5f, 5f);
             float y = Mathf.Clamp(buf.y, -5f, 5f);
-            board.transform.position = new Vector3(x, y, 0f);
+
+            rig.transform.position = new Vector3(x, y, 0f);
         }
     }
 }
