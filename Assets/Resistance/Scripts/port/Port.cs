@@ -8,6 +8,7 @@ public class Port : MonoBehaviour
     // public Port connectedPort;
     private static Port draggingPort = null;
     private bool isPushAlt = false;
+    private bool isPushShift = false;
     public ConnectionLine connectionLine;
 
     public List<Port> connectedPorts = new List<Port>();
@@ -26,6 +27,18 @@ public class Port : MonoBehaviour
 
     public bool CanConnect(Port other)
     {
+        if (this.parentNode == null || other.parentNode == null)
+        {
+            if (this.portType == "Start" || this.portType == "End" || other.portType == "Start" || other.portType == "End")
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        
         return this.parentNode != other.parentNode;
     }
 
@@ -37,9 +50,20 @@ public class Port : MonoBehaviour
             isPushAlt = true;
         }
 
-        if(Input.GetKeyUp(KeyCode.LeftAlt))
+        if (Input.GetKeyUp(KeyCode.LeftAlt))
         {
             isPushAlt = false;
+        }
+        
+        // shiftキー
+        if (Input.GetKeyDown(KeyCode.LeftShift))
+        {
+            isPushShift = true;
+        }
+
+        if (Input.GetKeyUp(KeyCode.LeftShift))
+        {
+            isPushShift = false;
         }
     }
 
@@ -54,7 +78,7 @@ public class Port : MonoBehaviour
                 return;
 
             // 接続線の描画をクリア
-            foreach(Port p in connectedPorts)
+            foreach (Port p in connectedPorts)
             {
                 ConnectionManager.Instance.DeleteConnection(this, p);
             }
@@ -68,8 +92,8 @@ public class Port : MonoBehaviour
             }
             // 自分のconnectedPortをすべてクリア
             connectedPorts.Clear();
-            
-            Debug.Log("disconnected");
+
+            Debug.Log("disconnected " + this.name);
         }
         else
         {
@@ -90,7 +114,7 @@ public class Port : MonoBehaviour
                         // connectedPortに接続先を追加
                         port.connectedPorts.Add(draggingPort);
                         draggingPort.connectedPorts.Add(port);
-                        Debug.Log($"Connected {draggingPort.parentNode.name} ↔ {port.parentNode.name}");
+                        Debug.Log("Connected");
 
                         // 接続されていることを表す線を描画
                         // connectionLine.ConnectLine();
@@ -105,6 +129,18 @@ public class Port : MonoBehaviour
 
                 draggingPort = null;
             }
+        }
+        
+        if(isPushShift)
+        {
+            Debug.Log("check connection");
+            int i = 0;
+            foreach(Port p in connectedPorts)
+            {
+                Debug.Log($"Port No {i} , {p.name}");
+                i++;
+            }
+            
         }
     }
 }

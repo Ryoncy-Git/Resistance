@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 9072778696751164355}
   - component: {fileID: 7877262497423880799}
   - component: {fileID: 4203143009593238395}
-  - component: {fileID: 4659278856947916880}
   - component: {fileID: 4060329682567690513}
   - component: {fileID: 5506488306987782739}
   m_Layer: 0
@@ -96,20 +95,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   portType: 
   parentNode: {fileID: 0}
-  connectedPort: {fileID: 0}
-  bezierConnection: {fileID: 0}
---- !u!114 &4659278856947916880
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5460438386286940145}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 169631879100c40489420b3aa11fff5a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  connectionLine: {fileID: 0}
+  connectedPorts: []
 --- !u!212 &4060329682567690513
 SpriteRenderer:
   m_ObjectHideFlags: 0
