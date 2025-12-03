@@ -5,6 +5,8 @@ public abstract class Nodes : MonoBehaviour
     public List<Port> Ports = new();
     public GameObject portPrefab;
     public string nodeName;
+    public string nodeType;
+    public double resistance = 0;
 
     public Port CreatePort()
     {
