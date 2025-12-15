@@ -2,13 +2,11 @@ using UnityEngine;
 
 public class ResistanceNode : Nodes
 {
-    private GameObject portIn;
-    private GameObject portOut;
     private Nodes portInput;
     public override void Initialize()
     {
         nodeName = "Resistance";
-        portIn = portOut = null;
+        nodeType = "Resistance";
 
         InstallPort();
     }

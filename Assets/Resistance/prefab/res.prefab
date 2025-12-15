@@ -260,6 +260,8 @@ MonoBehaviour:
   Ports: []
   portPrefab: {fileID: 5460438386286940145, guid: c1ee87885a3a38d4da35a2efadbfe1fe, type: 3}
   nodeName: 
+  nodeType: Resistance
+  resistance: 10
 --- !u!1 &8950474988512199887
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,10 +1,18 @@
 using UnityEngine;
+using TMPro;
 
 public class UIManager : MonoBehaviour
 {
-    public Culculator culculator;
+    public Calculator culculator;
+    public TextMeshProUGUI TextRes;
     public void OnClickCulculate()
     {
-        culculator.StartCulculate();
+        culculator.StartCalculate();
+    }
+
+    public void ChangeTextRes(double res)
+    {
+        TextRes.text = "Resistance = " + res + "Ω";
+        return;
     }
 }
