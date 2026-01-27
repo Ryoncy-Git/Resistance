@@ -1,368 +1,5 @@
-/*
 using UnityEngine;
 using System.Collections.Generic;
-
-public class Culculator : MonoBehaviour
-{
-    public GameObject startObj, endObj, board;
-    private Port startPort, endPort;
-    private Graph graph;
-    private Dictionary<Port, GraphNode> portToNode;
-    public UIManager uiManager;
-
-
-    void Start()
-    {
-        startPort = startObj.GetComponent<Port>();
-        endPort = endObj.GetComponent<Port>();
-    }
-    public void StartCulculate()
-    {
-        if(!canCalculate())
-        {
-            Debug.Log("connot culclate");
-            return;
-        }
-
-        CreateGraph();
-        // 計算
-        double R = ComputeEquivalentResistance(graph, startPort, endPort);
-
-        uiManager.ChangeTextRes(R);
-    }
-    
-    // お￥設計中～
-    private bool canCalculate()
-    {
-        if(startPort.connectedPorts.Count == 0 || endPort.connectedPorts.Count == 0)
-            return false;
-
-        // 全ポートが接続先を持っているかチェック
-        foreach (Transform child in board.transform)
-        {
-            if(child.name == "StartNode" || child.name == "EndNode")
-                continue;
-
-            Transform ports = child.Find("Ports");// portの親を取得
-            foreach(Transform c in ports)
-            {
-                Port p = c.GetChild(0).gameObject.GetComponent<Port>();
-                if (p.connectedPorts.Count == 0)
-                {
-                    return false;
-                }
-            }
-        }
-
-        return true;
-    }
-
-    private void CreateGraph()
-    {
-        graph = new Graph();
-
-        List<Port> allPorts = new();
-
-        //1. 全ポートの収集
-        foreach (Transform node in board.transform)
-        {
-            if(node.name == "StartNode" || node.name == "EndNode")
-                continue;
-
-            Transform ports = node.Find("Ports");// portの親を取得
-            foreach(Transform child in ports)
-            {
-                allPorts.Add(child.GetChild(0).GetComponent<Port>());
-            }
-        }
-
-        allPorts.Add(startPort);
-        allPorts.Add(endPort);
-
-
-        // 2. Port→GraphNode mapping
-        // Dictionary<Port, GraphNode> portToNode = new();
-        portToNode = new();
-        for (int i = 0; i < allPorts.Count; i++)
-        {
-            var node = new GraphNode(i);
-            graph.nodes.Add(node);
-            portToNode[allPorts[i]] = node; // 辞書の登録 これがPort -> dictionaryの対応表になる
-        }
-
-
-        // 3. Edgeを張る
-        HashSet<(int,int)> added = new(); // <Port ID, Port ID>で各エッジを定義
-
-        // 全ポートの接続先を確認
-        foreach (var p in allPorts)
-        {
-            foreach (var cp in p.connectedPorts)
-            {
-                // 接続が確認できたポート同士の
-                int idA = portToNode[p].Id; // 片方のポートのIDをIdAとして
-                int idB = portToNode[cp].Id;// もう片方をIdBとして
-
-                if (idA == idB) continue;
-
-                // 重複エッジを避ける
-                var key = idA < idB ? (idA, idB) : (idB, idA);
-                if (added.Contains(key)) continue;
-
-                added.Add(key); // 確認済みリストを更新
-
-                double R = 0; //　いったん0で初期化
-                if(p.parentNode == cp.parentNode) // board内で同じノードのポートだった時（親ノードが同じとき）
-                {
-                    if(p.parentNode.nodeType == "Resistance")// 抵抗ノードの時はその抵抗値を代入
-                    {
-                        R = p.parentNode.resistance;
-                    }
-                    else // 抵抗ノードでないときは抵抗値0
-                    {
-                        R = 0;
-                    }
-                }
-
-                graph.AddEdge(portToNode[p], portToNode[cp], R);
-            }
-        }
-    }
-
-    // 0Ωのノードを統合して簡略化したグラフを再構築
-
-    // Dictionary<int, int> BuildReducedNodeMap(Graph g)
-    // {
-    //     UnionFind uf = new UnionFind(g.nodes.Count);
-
-    //     foreach (var e in g.edges)
-    //     {
-    //         if (Mathf.Approximately((float)e.Res, 0f))
-    //         {
-    //             uf.Union(e.A.Id, e.B.Id);
-    //         }
-    //     }
-
-    //     Debug.Log("end of UnionFind");
-
-    //     Dictionary<int, int> map = new();
-    //     int newId = 0;
-
-    //     foreach (var n in g.nodes)
-    //     {
-    //         int root = uf.Find(n.Id);
-    //         if (!map.ContainsKey(root))
-    //             map[root] = newId++;
-    //     }
-
-    //     return map;
-    // }
-    Dictionary<int,int> BuildReducedNodeMap(Graph g)
-    {
-        // 1) 安全のため、oldId が連番でない場合に備えて index マップを作る
-        //    indexMap: oldId -> compactIndex (0..N-1)
-        int N = g.nodes.Count;
-        var indexMap = new Dictionary<int,int>(N);
-        for (int i = 0; i < g.nodes.Count; i++)
-        {
-            indexMap[g.nodes[i].Id] = i;
-        }
-
-        // 2) UnionFind は 0..N-1 のインデックスで扱う
-        UnionFind uf = new UnionFind(N);
-
-        // 3) 0Ω エッジで union (注意: e.A.Id / e.B.Id を index に変換)
-        foreach (var e in g.edges)
-        {
-            if (Mathf.Approximately((float)e.Res, 0f))
-            {
-                // e.A.Id と e.B.Id が indexMap にあるかチェック（無ければスキップ or エラー）
-                if (!indexMap.TryGetValue(e.A.Id, out int ia) || !indexMap.TryGetValue(e.B.Id, out int ib))
-                {
-                    Debug.LogWarning($"BuildReducedNodeMap: edge refers unknown node id A:{e.A.Id} B:{e.B.Id}");
-                    continue;
-                }
-                uf.Union(ia, ib);
-            }
-        }
-
-        // 4) 代表 rootIndex -> reducedId を作る（代表だけに連番を振る）
-        var rootToReduced = new Dictionary<int,int>();
-        int nextReducedId = 0;
-        for (int i = 0; i < N; i++)
-        {
-            int root = uf.Find(i);
-            if (!rootToReduced.ContainsKey(root))
-                rootToReduced[root] = nextReducedId++;
-        }
-
-        // 5) 最終的に originalNodeId -> reducedId を返す
-        var finalMap = new Dictionary<int,int>(N);
-        foreach (var node in g.nodes)
-        {
-            int origId = node.Id;
-            int idx = indexMap[origId];      // 0..N-1 の index
-            int root = uf.Find(idx);        // 代表 index
-            int reduced = rootToReduced[root];
-            finalMap[origId] = reduced;
-        }
-
-        return finalMap;
-    }
-
-    // コンダクタンス行列、N * N行列を作る
-    double[,] BuildConductanceMatrix(Graph g, Dictionary<int,int> nodeMap)
-    {
-        int N = nodeMap.Count;
-        double[,] G = new double[N, N];
-
-        foreach (var e in g.edges)
-        {
-            if (e.Res <= 0) continue; // 0Ω は統合済みで無視
-
-            int a = nodeMap[e.A.Id];
-            int b = nodeMap[e.B.Id];
-
-            double gval = 1.0 / e.Res;
-
-            G[a, a] += gval;
-            G[b, b] += gval;
-            G[a, b] -= gval;
-            G[b, a] -= gval;
-        }
-
-        return G;
-    }
-
-    // ガウス消去法によって行列計算
-    double[] SolveLinear(double[,] A, double[] b)
-    {
-        int n = b.Length;
-
-        for (int i = 0; i < n; i++)
-        {
-            double pivot = A[i, i];
-            for (int j = i; j < n; j++)
-                A[i, j] /= pivot;
-            b[i] /= pivot;
-
-            for (int k = 0; k < n; k++)
-            {
-                if (k == i) continue;
-
-                double factor = A[k, i];
-                for (int j = i; j < n; j++)
-                    A[k, j] -= factor * A[i, j];
-
-                b[k] -= factor * b[i];
-            }
-        }
-
-        return b;
-    }
-
-    // 抵抗値を求める本体部分
-    double ComputeEquivalentResistance(Graph g, Port startPort, Port endPort)
-    {
-        // 1. ノード縮約
-        var map = BuildReducedNodeMap(g);
-        int N = map.Count;
-
-        Debug.Log("N = " + N);
-
-
-        // 2. 行列生成
-        double[,] G = BuildConductanceMatrix(g, map);
-
-
-        // 3. Known voltage boundary conditions
-        int s = map[portToNode[startPort].Id]; // startPort の GraphNode ID 
-        int t = map[portToNode[endPort].Id];   // endPort の GraphNode ID (ground)
-
-        int M = N - 1; // ground 行・列を除去
-
-        double[,] A = new double[M, M];
-        double[] b = new double[M];
-
-
-        System.Func<int,int> idx = (x) => x < t ? x : x - 1;
-
-
-        for (int i = 0; i < N; i++)
-        {
-            if (i == t) continue;
-            int ii = idx(i);
-
-            for (int j = 0; j < N; j++)
-            {
-                if (j == t) continue;
-                int jj = idx(j);
-                A[ii, jj] = G[i, j];
-            }
-        }
-
-        // startPort の電位を +1V とする
-        b[idx(s)] = 1.0;
-
-
-        // 4. 方程式を解く
-        double[] V = SolveLinear(A, b);
-
-
-        // startPort の電位
-        double Vs = 1.0;
-
-        // 5. startPort から出る電流を計算
-        double Itotal = 0;
-
-        foreach (var e in g.edges)
-        {
-            if (e.A.Id == s || e.B.Id == s)
-            {
-                int other = (e.A.Id == s ? map[e.B.Id] : map[e.A.Id]);
-                double Vo = (other == t ? 0 : V[idx(other)]);
-
-                Itotal += (Vs - Vo) / e.Res;
-                Debug.Log(e.Res);
-            }
-        }
-
-
-        Debug.Log(Itotal);// 0になっちゃう
-
-        return 1.0 / Itotal; // R = V / I , V=1
-    }
-}
-
-class UnionFind
-{
-    int[] parent;
-
-    public UnionFind(int n)
-    {
-        parent = new int[n];
-        for (int i = 0; i < n; i++) parent[i] = i;
-    }
-
-    public int Find(int x)
-    {
-        if (parent[x] != x) parent[x] = Find(parent[x]);
-        return parent[x];
-    }
-
-    public void Union(int a, int b)
-    {
-        int ra = Find(a);
-        int rb = Find(b);
-        if (ra != rb) parent[rb] = ra;
-    }
-}
-
-*/
-
-using UnityEngine;
-using System.Collections.Generic;
-
 public class Calculator : MonoBehaviour
 {
     public GameObject startObj, endObj, board;
@@ -544,36 +181,94 @@ public class Calculator : MonoBehaviour
     double[] SolveLinear(double[,] A, double[] b)
     {
         int n = b.Length;
-        for (int i = 0; i < n; i++)
+        for(int i = 0; i < n; i++)
         {
+            double buff;
             double pivot = A[i, i];
-            for (int j = i; j < n; j++)
+            if(Mathf.Abs((float)pivot) < 1e-12f)
+            {
+                // ピボットが0なので行入れ替え
+                // まず、0じゃないところを探す
+                int newPivotRow = -1;
+                for(int k = i + 1; k < n; k++)
+                {
+                    if(Mathf.Abs((float)A[k, i]) < 1e-12f)
+                    {
+                        if(k == n - 1)
+                        {
+                            Debug.LogWarning("行列サイズ != rank");
+                        }
+                        continue;
+                    }
+                    else
+                    {
+                        newPivotRow = k;
+                        break;
+                    }
+                }
+                
+
+                if(newPivotRow == -1)
+                {
+                    Debug.LogError("new pivot row = -1");
+                }
+
+                // 良い感じに行入れ替え
+                
+                for(int j = 0; j < n; j++)
+                {
+                    buff = A[i, j];
+                    A[i, j] = A[newPivotRow, j];
+                    A[newPivotRow, j] = buff;
+                }
+                buff = b[i];
+                b[i] = b[newPivotRow];
+                b[newPivotRow] = buff;
+            }
+            pivot = A[i, i];
+
+            for(int j = 0; j < n; j++)
+            {
+                // pivotを1にするためにその行をpivorで割る
                 A[i, j] /= pivot;
+            }
             b[i] /= pivot;
 
-            for (int k = 0; k < n; k++)
+            for(int ii = i + 1; ii < n; ii++)
             {
-                if (k == i) continue;
-                double factor = A[k, i];
-                for (int j = i; j < n; j++)
-                    A[k, j] -= factor * A[i, j];
-                b[k] -= factor * b[i];
+                // 斜め成分をとる
+                double head = A[ii, i];
+                for(int j = i; j < n; j++)
+                {
+                    A[ii, j] -= A[i, j] * head;
+                }
+
+                b[ii] -= b[i] * head;
             }
         }
+
+
+        for (int i = n - 1; i >= 0; i--)
+        {
+            for (int j = i + 1; j < n; j++)
+            {
+                b[i] -= A[i, j] * b[j];
+            }
+            // A[i,i] は pivot 正規化済みなので 1 のはず
+            // もし 1 でない可能性があるなら b[i] /= A[i,i] を入れる
+        }
+
         return b;
     }
 
+
+
     double ComputeEquivalentResistance(Graph g, Port startPort, Port endPort)
     {
-        // 計算が何やらおかしいことになっている
-        // 回路の検出は上手くいっている
-        // 回路の縮約以降は動作をまだ追えていないので要注意すること
-        // 具体的には、直列回路があるとNANΩになってしまう
-        // 詳細はcopilot君に
-        foreach (var e in g.edges)
-        {
-            Debug.Log($"Edge {e.A.Id} - {e.B.Id}, R={e.Res}");
-        }
+        // foreach (var e in g.edges)
+        // {
+        //     Debug.Log($"Edge {e.A.Id} - {e.B.Id}, R={e.Res}");
+        // }
 
         var map = BuildReducedNodeMap(g);
         int N = map.Count;
@@ -591,6 +286,22 @@ public class Calculator : MonoBehaviour
         }
 
         int M = unknownNodes.Count;
+
+        // 特別処理: 未知ノードがゼロなら直接抵抗を返す
+        if (M == 0)
+        {
+            foreach (var e in g.edges)
+            {
+                if (e.Res > 0 &&
+                    ((map[e.A.Id] == s && map[e.B.Id] == t) ||
+                    (map[e.A.Id] == t && map[e.B.Id] == s)))
+                {
+                    return e.Res;
+                }
+            }
+            return double.PositiveInfinity; // 抵抗が見つからない場合は開放
+        }
+
         double[,] A = new double[M, M];
         double[] b = new double[M];
 
@@ -612,7 +323,7 @@ public class Calculator : MonoBehaviour
         }
 
         // 解く
-        double[] Vunknown = (M > 0) ? SolveLinear(A, b) : new double[0];
+        double[] Vunknown = SolveLinear(A, b);
 
         // --- 電流計算 ---
         double Vs = 1.0;
@@ -632,7 +343,7 @@ public class Calculator : MonoBehaviour
                 else
                 {
                     int idx = unknownNodes.IndexOf(other);
-                    Vo = Vunknown[idx];
+                    Vo = (idx >= 0) ? Vunknown[idx] : 0.0;
                 }
 
                 Itotal += (Vs - Vo) / e.Res;
@@ -641,7 +352,7 @@ public class Calculator : MonoBehaviour
 
         Debug.Log("Itotal = " + Itotal);
 
-        if (Mathf.Approximately((float)Itotal, 0f))
+        if (double.IsNaN(Itotal) || Mathf.Approximately((float)Itotal, 0f))
             return double.PositiveInfinity; // 開放回路扱い
 
         return 1.0 / Itotal; // R = V/I
